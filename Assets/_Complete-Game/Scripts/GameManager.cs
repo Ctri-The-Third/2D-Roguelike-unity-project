@@ -73,16 +73,21 @@ namespace Completed
             instance.level++;
             instance.InitGame();
 
+            Debug.Log("Starting a new mission, player food = " + instance.playerFoodPoints);
+
             GameEvent levelStart = new GameEvent("missionStarted")
                 .AddParam("isTutorial", false)
                 .AddParam("missionID", "" + instance.level)
                 .AddParam("missionName", "Day " + instance.level)
                 .AddParam("userScore", instance.playerFoodPoints);
-            DDNA.Instance.RecordEvent(levelStart);
+            DDNA.Instance.RecordEvent(levelStart).Add(new GameParametersHandler(gameParameters  => { changeGameParameters(gameParameters); }));
             //missionStarted
         }
 
-		
+		static private void changeGameParameters(Dictionary<string,object> parameters)
+        {
+            Debug.Log("EVENT TRIGGERED: " + DeltaDNA.MiniJSON.Json.Serialize(parameters));
+        }
 		//Initializes the game for each level.
 		void InitGame()
 		{
