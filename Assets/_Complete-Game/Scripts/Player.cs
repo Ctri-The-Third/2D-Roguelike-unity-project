@@ -3,6 +3,8 @@ using System.Collections;
 using UnityEngine.UI;	//Allows us to use UI.
 using UnityEngine.SceneManagement;
 using DeltaDNA;
+using System;
+
 namespace Completed
 {
 	//Player inherits from MovingObject, our base class for objects that can move, Enemy also inherits from this.
@@ -192,11 +194,14 @@ namespace Completed
 			//Check if the tag of the trigger collided with is Food.
 			else if(other.tag == "Food")
 			{
+
+                
 				//Add pointsPerFood to the players current food total.
-				food += pointsPerFood;
+                int increase = (int)Math.Floor(((float)pointsPerFood * GameManager.instance.foodMultiplier));
+                food += increase;
 				
 				//Update foodText to represent current total and notify player that they gained points
-				foodText.text = "+" + pointsPerFood + " Food: " + food;
+				foodText.text = "+" + increase + " Food: " + food;
 				
 				//Call the RandomizeSfx function of SoundManager and pass in two eating sounds to choose between to play the eating sound effect.
 				SoundManager.instance.RandomizeSfx (eatSound1, eatSound2);
@@ -209,10 +214,11 @@ namespace Completed
 			else if(other.tag == "Soda")
 			{
 				//Add pointsPerSoda to players food points total
-				food += pointsPerSoda;
+                int increase = (int)Math.Floor(((float)pointsPerSoda * GameManager.instance.foodMultiplier)); ;
+                food += increase;
 				
 				//Update foodText to represent current total and notify player that they gained points
-				foodText.text = "+" + pointsPerSoda + " Food: " + food;
+				foodText.text = "+" + increase + " Food: " + food;
 				
 				//Call the RandomizeSfx function of SoundManager and pass in two drinking sounds to choose between to play the drinking sound effect.
 				SoundManager.instance.RandomizeSfx (drinkSound1, drinkSound2);
@@ -236,10 +242,13 @@ namespace Completed
 		//It takes a parameter loss which specifies how many points to lose.
 		public void LoseFood (int loss)
 		{
-			//Set the trigger for the player animator to transition to the playerHit animation.
-			animator.SetTrigger ("playerHit");
+
+            loss = (int)Math.Floor(((float)loss * GameManager.instance.damageMultiplier)); ;
+            //Set the trigger for the player animator to transition to the playerHit animation.
+            animator.SetTrigger ("playerHit");
 			
 			//Subtract lost food points from the players total.
+
 			food -= loss;
 			
 			//Update the food display with the new total.

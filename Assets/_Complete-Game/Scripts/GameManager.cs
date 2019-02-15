@@ -14,10 +14,15 @@ namespace Completed
 		public float turnDelay = 0.1f;							//Delay between each Player turn.
 		public int playerFoodPoints = 100;						//Starting value for Player food points.
 		public static GameManager instance = null;				//Static instance of GameManager which allows it to be accessed by any other script.
-		[HideInInspector] public bool playersTurn = true;		//Boolean to check if it's players turn, hidden in inspector but public.
-		
-		
-		private Text levelText;									//Text to display current level number.
+		[HideInInspector] public bool playersTurn = true;       //Boolean to check if it's players turn, hidden in inspector but public.
+
+        public float foodMultiplier = 1;
+        public float damageMultiplier = 1;
+        public string levelModifierText = "";
+
+
+
+        private Text levelText;									//Text to display current level number.
 		private GameObject levelImage;							//Image to block out level as levels are being set up, background for levelText.
 		private BoardManager boardScript;						//Store a reference to our BoardManager which will set up the level.
 		private int level = 1;									//Current level number, expressed in game as "Day 1".
@@ -33,6 +38,9 @@ namespace Completed
 		//Awake is always called before any Start functions
 		void Awake()
 		{
+
+        
+
             //Check if instance already exists
             if (instance == null)
 
@@ -56,7 +64,18 @@ namespace Completed
 			
 			//Call the InitGame function to initialize the first level 
 			InitGame();
-		}
+
+        }
+
+        void Start()
+        {
+            Debug.Log("Pinged the Start ()");
+            DDNA.Instance.SetLoggingLevel(DeltaDNA.Logger.Level.DEBUG);
+            DDNA.Instance.NotifyOnSessionConfigured(true);
+            DDNA.Instance.OnSessionConfigured += (bool cachedConfig) => GetGameConfig(cachedConfig);
+            DDNA.Instance.Settings.MultipleActionsForEventTriggerEnabled = true;
+            DDNA.Instance.StartSDK();
+        }
 
         //this is called only once, and the paramter tell it to be called only after the scene was loaded
         //(otherwise, our Scene Load callback would be called the very first load, and we don't want that)
@@ -73,6 +92,10 @@ namespace Completed
             instance.level++;
             instance.InitGame();
 
+            instance.foodMultiplier = 1;
+            instance.damageMultiplier = 1;
+            instance.levelModifierText = "";
+
             Debug.Log("Starting a new mission, player food = " + instance.playerFoodPoints);
 
             GameEvent levelStart = new GameEvent("missionStarted")
@@ -80,16 +103,61 @@ namespace Completed
                 .AddParam("missionID", "" + instance.level)
                 .AddParam("missionName", "Day " + instance.level)
                 .AddParam("userScore", instance.playerFoodPoints);
-            DDNA.Instance.RecordEvent(levelStart).Add(new GameParametersHandler(gameParameters  => { changeGameParameters(gameParameters); }));
-            //missionStarted
+            DDNA.Instance.RecordEvent(levelStart).Add(new GameParametersHandler(gameParameters => { Debug.Log("Entry point 3"); myGameParameterHandler(gameParameters); })).Run();
+            
+        }
+        public void GetGameConfig(bool cachedConfig)
+        {
+            
+            Debug.Log("Configuration Loaded, Cached =  " + cachedConfig.ToString());
+            Debug.Log("Recording a sdkConfigured event for Event Triggered Campaign to react to");
+            
+
+            // Create an sdkConfigured event object
+            var gameEvent = new GameEvent("sdkConfigured")
+                .AddParam("clientVersion", DDNA.Instance.ClientVersion)
+                .AddParam("userLevel", instance.level);
+            
+            // Record sdkConfigured event and wire up handler callbacks
+            DDNA.Instance.RecordEvent(gameEvent)
+                .Add(new GameParametersHandler(gameParameters => {
+                // do something with the game parameters
+                Debug.Log("Entry point 1 - ");
+                    
+                    myGameParameterHandler(gameParameters);
+                }))
+                .Add(new ImageMessageHandler(DDNA.Instance, imageMessage => {
+                // do something with the image message
+                myImageMessageHandler(imageMessage);
+                }))
+                .Run();
+
+            Debug.Log(gameEvent.ToString());
         }
 
-		static private void changeGameParameters(Dictionary<string,object> parameters)
+        private static void myImageMessageHandler(object thing)
         {
-            Debug.Log("EVENT TRIGGERED: " + DeltaDNA.MiniJSON.Json.Serialize(parameters));
+
         }
-		//Initializes the game for each level.
-		void InitGame()
+        private static void myGameParameterHandler(Dictionary<string, object> gameParameters)
+        {
+            // Parameters Received      
+            Debug.Log("Received game parameters from event trigger: " + DeltaDNA.MiniJSON.Json.Serialize(gameParameters));
+
+            if (gameParameters.ContainsKey("missionFoodMultiplier"))
+            {
+                float newFoodValue = float.Parse(gameParameters["missionFoodMultiplier"].ToString());
+                instance.foodMultiplier = newFoodValue;
+
+            }
+            if (gameParameters.ContainsKey("missionModifierText"))
+            {
+                string newMissionModifierText = gameParameters["missionModifierText"].ToString();
+                
+            }
+        }
+        //Initializes the game for each level.
+        void InitGame()
 		{
 			//While doingSetup is true the player can't move, prevent player from moving while title card is up.
 			doingSetup = true;
@@ -101,7 +169,7 @@ namespace Completed
 			levelText = GameObject.Find("LevelText").GetComponent<Text>();
 			
 			//Set the text of levelText to the string "Day" and append the current level number.
-			levelText.text = "Day " + level;
+			levelText.text = "Day " + level + instance.levelModifierText;
 			
 			//Set levelImage to active blocking player's view of the game board during setup.
 			levelImage.SetActive(true);

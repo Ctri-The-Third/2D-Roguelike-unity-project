@@ -151,6 +151,9 @@ namespace Completed
 			
 			//Instantiate the exit tile in the upper right hand corner of our game board
 			Instantiate (exit, new Vector3 (columns - 1, rows - 1, 0f), Quaternion.identity);
+
+            GameManager.instance.foodMultiplier = 1;
+            GameManager.instance.damageMultiplier = 1;
 		}
 	}
 }
