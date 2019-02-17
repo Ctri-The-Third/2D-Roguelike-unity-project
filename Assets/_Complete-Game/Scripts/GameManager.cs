@@ -39,7 +39,12 @@ namespace Completed
 		void Awake()
 		{
 
-        
+            Debug.Log("Pinged the Start ()");
+            DDNA.Instance.SetLoggingLevel(DeltaDNA.Logger.Level.DEBUG);
+            DDNA.Instance.NotifyOnSessionConfigured(true);
+            DDNA.Instance.OnSessionConfigured += (bool cachedConfig) => GetGameConfig(cachedConfig);
+            DDNA.Instance.Settings.MultipleActionsForEventTriggerEnabled = true;
+            DDNA.Instance.StartSDK();
 
             //Check if instance already exists
             if (instance == null)
@@ -69,12 +74,7 @@ namespace Completed
 
         void Start()
         {
-            Debug.Log("Pinged the Start ()");
-            DDNA.Instance.SetLoggingLevel(DeltaDNA.Logger.Level.DEBUG);
-            DDNA.Instance.NotifyOnSessionConfigured(true);
-            DDNA.Instance.OnSessionConfigured += (bool cachedConfig) => GetGameConfig(cachedConfig);
-            DDNA.Instance.Settings.MultipleActionsForEventTriggerEnabled = true;
-            DDNA.Instance.StartSDK();
+            
         }
 
         //this is called only once, and the paramter tell it to be called only after the scene was loaded
@@ -92,19 +92,7 @@ namespace Completed
             instance.level++;
             instance.InitGame();
 
-            instance.foodMultiplier = 1;
-            instance.damageMultiplier = 1;
-            instance.levelModifierText = "";
 
-            Debug.Log("Starting a new mission, player food = " + instance.playerFoodPoints);
-
-            GameEvent levelStart = new GameEvent("missionStarted")
-                .AddParam("isTutorial", false)
-                .AddParam("missionID", "" + instance.level)
-                .AddParam("missionName", "Day " + instance.level)
-                .AddParam("userScore", instance.playerFoodPoints);
-            DDNA.Instance.RecordEvent(levelStart).Add(new GameParametersHandler(gameParameters => { Debug.Log("Entry point 3"); myGameParameterHandler(gameParameters); })).Run();
-            
         }
         public void GetGameConfig(bool cachedConfig)
         {
@@ -152,27 +140,45 @@ namespace Completed
             }
             if (gameParameters.ContainsKey("missionModifierText"))
             {
-                string newMissionModifierText = gameParameters["missionModifierText"].ToString();
+                instance.levelModifierText = gameParameters["missionModifierText"].ToString();
                 
             }
         }
         //Initializes the game for each level.
         void InitGame()
 		{
-			//While doingSetup is true the player can't move, prevent player from moving while title card is up.
-			doingSetup = true;
+            //While doingSetup is true the player can't move, prevent player from moving while title card is up.
+
+            instance.foodMultiplier = 1;
+            instance.damageMultiplier = 1;
+            instance.levelModifierText = "";
+
+            Debug.Log("Starting a new mission, player food = " + instance.playerFoodPoints);
+
+            GameEvent levelStart = new GameEvent("missionStarted")
+                .AddParam("isTutorial", false)
+                .AddParam("missionID", "" + instance.level)
+                .AddParam("missionName", "Day " + instance.level)
+                .AddParam("userScore", instance.playerFoodPoints);
+            DDNA.Instance.RecordEvent(levelStart).Add(new GameParametersHandler(gameParameters => { Debug.Log("Entry point 3"); myGameParameterHandler(gameParameters); })).Run();
+
+
+            doingSetup = true;
 			
 			//Get a reference to our image LevelImage by finding it by name.
 			levelImage = GameObject.Find("LevelImage");
 			
 			//Get a reference to our text LevelText's text component by finding it by name and calling GetComponent.
 			levelText = GameObject.Find("LevelText").GetComponent<Text>();
-			
-			//Set the text of levelText to the string "Day" and append the current level number.
-			levelText.text = "Day " + level + instance.levelModifierText;
-			
-			//Set levelImage to active blocking player's view of the game board during setup.
-			levelImage.SetActive(true);
+
+            Text adText = GameObject.Find("ModifierText").GetComponent<Text>();
+            adText.text = instance.levelModifierText;
+            //Set the text of levelText to the string "Day" and append the current level number.
+            Debug.Log("Starting with modifier text " + instance.levelModifierText);
+			levelText.text = "Day " + level;
+
+            //Set levelImage to active blocking player's view of the game board during setup.
+            levelImage.SetActive(true);
 			
 			//Call the HideLevelImage function with a delay in seconds of levelStartDelay.
 			Invoke("HideLevelImage", levelStartDelay);
@@ -222,7 +228,7 @@ namespace Completed
 		{
 			//Set levelText to display number of levels passed and game over message
 			levelText.text = "After " + level + " days, you starved.";
-			
+            levelModifierText = "";
 			//Enable black background image gameObject.
 			levelImage.SetActive(true);
 			
